@@ -5,13 +5,21 @@ export interface Subscription {
 export class Observable<T> {
   private observers: Array<(data: T) => void> = []
 
-  subscribe(f: (data: T) => void): Subscription {
-    this.observers.push(f)
+  subscribe(callback: (data: T) => void): Subscription {
+    this.observers.push(callback)
     return {
       unsubscribe: () => {
-        this.observers = this.observers.filter((other) => f !== other)
+        this.unsubscribe(callback)
       },
     }
+  }
+
+  unsubscribe(callback: (data: T) => void) {
+    this.observers = this.observers.filter((other) => callback !== other)
+  }
+
+  hasObservers() {
+    return this.observers.length !== 0
   }
 
   notify(data: T) {

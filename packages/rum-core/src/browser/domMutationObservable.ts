@@ -1,18 +1,13 @@
-import { monitor, Subscription } from '@datadog/browser-core'
+import { monitor, Subscription, Observable } from '@datadog/browser-core'
 
 export interface DOMMutationObservable {
   subscribe(callback: () => void): Subscription
 }
 
 export function createDOMMutationObservable(): DOMMutationObservable {
-  let callbacks: Array<() => void> = []
+  const observable = new Observable<void>()
   const MutationObserver = getMutationObserverConstructor()
-  const observer = MutationObserver ? new MutationObserver(monitor(notify)) : undefined
-  let isDOMObserved = false
-
-  function notify() {
-    callbacks.forEach((callback) => callback())
-  }
+  const observer = MutationObserver ? new MutationObserver(monitor(() => observable.notify())) : undefined
 
   function startDOMObservation() {
     if (!observer) {
@@ -24,7 +19,6 @@ export function createDOMMutationObservable(): DOMMutationObservable {
       childList: true,
       subtree: true,
     })
-    isDOMObserved = true
   }
 
   function stopDOMObservation() {
@@ -33,21 +27,20 @@ export function createDOMMutationObservable(): DOMMutationObservable {
     }
 
     observer.disconnect()
-    isDOMObserved = false
   }
 
   return {
     subscribe: (callback) => {
-      if (!isDOMObserved) {
+      if (!observable.hasObservers()) {
         startDOMObservation()
       }
 
-      callbacks.push(callback)
+      observable.subscribe(callback)
       return {
         unsubscribe: () => {
-          callbacks = callbacks.filter((other) => callback !== other)
+          observable.unsubscribe(callback)
 
-          if (!callbacks.length) {
+          if (!observable.hasObservers()) {
             stopDOMObservation()
           }
         },
