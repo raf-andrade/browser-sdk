@@ -1,3 +1,4 @@
+import { elapsed, relativeNow, RelativeTime } from '@datadog/browser-core/src/tools/timeUtils'
 import { monitor, addErrorToMonitoringBatch, addMonitoringMessage } from '../domain/internalMonitoring'
 import { generateUUID, includes } from '../tools/utils'
 
@@ -47,6 +48,7 @@ export class HttpRequest {
           flush_reason: flushReason,
           event: {
             is_trusted: event.isTrusted,
+            lengthComputable: event.lengthComputable,
             total: event.total,
             loaded: event.loaded,
           },
@@ -54,12 +56,18 @@ export class HttpRequest {
             status: req.status,
             ready_state: req.readyState,
             response_text: req.responseText.slice(0, 512),
+            duration: elapsed(xhrStartTime, relativeNow()),
           },
         })
       }
     }
 
+    let xhrStartTime: RelativeTime
     const request = new XMLHttpRequest()
+    request.addEventListener(
+      'loadstart',
+      monitor(() => (xhrStartTime = relativeNow()))
+    )
     request.addEventListener(
       'loadend',
       monitor((event) => transportIntrospection(event))
