@@ -322,7 +322,6 @@ notify-prod-stable-failure:
 
 staging-reset-scheduled:
   stage: task
-  cache: {}
   only:
     variables:
       - $TARGET_TASK_NAME == "staging-reset-scheduled"
